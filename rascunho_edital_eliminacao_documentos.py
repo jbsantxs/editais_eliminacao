@@ -66,11 +66,14 @@ limpar_colunas = [
     'Subfunção',
     'Atividade',
     'Série documental',
+    'Descrição documental',
     'Observações complementares'
 ]
 
 for campo in limpar_colunas + ['Região Administrativa', 'Município']:
-    dataframe[campo] = dataframe[campo].astype(str).str.strip()
+    dataframe[campo] = (
+        dataframe[campo].fillna('').astype(str).str.strip()
+    )
 
 # filtra apenas as linhas com "Criar edital"
 df_criar_edital = dataframe[
@@ -86,7 +89,8 @@ if df_criar_edital.empty:
     exit()
 
 solicitacao = df_criar_edital.groupby(
-    ['N° Processo SEI', 'Região Administrativa', 'Município']
+    ['N° Processo SEI', 'Região Administrativa', 'Município'],
+    dropna=False
 )
 
 for (processo, regiao, municipio), grupo in solicitacao:
@@ -110,6 +114,7 @@ for (processo, regiao, municipio), grupo in solicitacao:
     for campo in limpar_colunas:
         grupo.loc[:, campo] = (
             grupo[campo]
+            .fillna('')
             .astype(str)
             .str.strip()
         )
@@ -130,7 +135,7 @@ for (processo, regiao, municipio), grupo in solicitacao:
         'Data Limite',
         'Quantidade',
         'Observações complementares'
-    ]).first().reset_index()
+    ], dropna=False).first().reset_index()
 
     detalhamento['chave_ordenacao'] = (
         detalhamento['Série documental']
@@ -187,7 +192,6 @@ for (processo, regiao, municipio), grupo in solicitacao:
             "observacoes_complementares": (
                 row['Observações complementares']
                 .replace('_x000D_', ' ')
-                .replace('nan', '')
             )
         })
 

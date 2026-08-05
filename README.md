@@ -31,7 +31,7 @@ O script precisa ser executado com a pasta do SharePoint [Editais de Eliminaçã
 
 - `Relacao de Expurgo para Rascunho.xlsx` — planilha de controle, com duas abas:
   - `Edital de Caixa` — relação de documentos a eliminar
-  - `Membros CADA` — colunas `NOME`, `CARGO` e `STATUS`; deve haver **exatamente um** membro com `STATUS` "Ativo", que é quem assina o edital (o script para com erro se houver zero ou mais de um)
+  - `Membros CADA` — colunas `NOME`, `CARGO` e `STATUS`; o membro com `STATUS` "Ativo" é quem assina o edital. Se nenhum membro estiver "Ativo", assina fixo "IARA LOPES DA SILVA" / "Coordenadora". O script para com erro apenas se houver **mais de um** membro "Ativo" ao mesmo tempo (assinatura ambígua)
 - `Editais Elaborados/` — pasta de saída dos editais gerados em `.docx`
 - `Modelos/modelo_edital.docx` — template Word único, com placeholders Jinja2 (`{{ data_edital }}`, `{{ regiao }}`, `{{ municipio }}`, `{{ total_caixas }}`, `{{ nome_membro }}`, `{{ cargo_membro }}` etc.) e um trecho repetido para cada item do detalhamento (`{% for item in itens %} ... {% endfor %}`). Por ser um `.docx` real, a formatação (negrito, títulos, espaçamento) pode ser ajustada diretamente no Word, sem alterar o código.
 

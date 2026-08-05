@@ -175,14 +175,19 @@ membros['STATUS'] = membros['STATUS'].fillna('').astype(str).str.strip()
 
 membros_ativos = membros[membros['STATUS'].str.lower() == 'ativo']
 
-if len(membros_ativos) != 1:
+if len(membros_ativos) > 1:
     raise ValueError(
-        "Esperado exatamente 1 membro com STATUS 'Ativo' na aba "
+        "Esperado no máximo 1 membro com STATUS 'Ativo' na aba "
         f"'Membros CADA', encontrado(s): {len(membros_ativos)}"
     )
 
-nome_membro = str(membros_ativos['NOME'].iloc[0]).strip().upper()
-cargo_membro = str(membros_ativos['CARGO'].iloc[0]).strip()
+if membros_ativos.empty:
+    # nenhum membro ativo: assina a coordenadora padrão
+    nome_membro = "IARA LOPES DA SILVA"
+    cargo_membro = "Coordenadora"
+else:
+    nome_membro = str(membros_ativos['NOME'].iloc[0]).strip().upper()
+    cargo_membro = str(membros_ativos['CARGO'].iloc[0]).strip()
 
 solicitacao = df_criar_edital.groupby(
     ['N° Processo SEI', 'Região Administrativa', 'Município'],

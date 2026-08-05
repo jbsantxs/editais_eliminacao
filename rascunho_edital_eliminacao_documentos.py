@@ -1,4 +1,5 @@
 # importações de bibliotecas
+import io
 import os
 import re
 from datetime import datetime
@@ -266,6 +267,19 @@ else:
     nome_membro = str(membros_ativos['NOME'].iloc[0]).strip().upper()
     cargo_membro = str(membros_ativos['CARGO'].iloc[0]).strip()
 
+# templates e planilha carregados uma única vez, fora dos loops
+wb = load_workbook(ARQUIVO)
+aba_caixa = wb["Edital de Caixa"]
+aba_massa = wb["Edital de Massa"]
+
+if not df_criar_edital.empty:
+    with open(MODELO_EDITAL, 'rb') as arquivo_modelo:
+        modelo_edital_bytes = arquivo_modelo.read()
+
+if not df_criar_edital_massa.empty:
+    with open(MODELO_EDITAL_MASSA, 'rb') as arquivo_modelo:
+        modelo_edital_massa_bytes = arquivo_modelo.read()
+
 solicitacao = df_criar_edital.groupby(
     ['N° Processo SEI', 'Município'],
     dropna=False
@@ -405,20 +419,14 @@ for (processo, municipio), grupo in solicitacao:
         nome_arquivo
     )
 
-    documento = DocxTemplate(MODELO_EDITAL)
+    documento = DocxTemplate(io.BytesIO(modelo_edital_bytes))
     documento.render(contexto_edital)
     documento.save(caminho_arquivo)
 
-    # atualiza excel
-    wb = load_workbook(ARQUIVO)
-
-    aba = wb["Edital de Caixa"]
-
+    # marca status (planilha é salva uma única vez, ao final do script)
     for idx in grupo.index:
         excel_row = idx + 2
-        aba[f"O{excel_row}"] = "Edital criado"
-
-    wb.save(ARQUIVO)
+        aba_caixa[f"O{excel_row}"] = "Edital criado"
 
 # edital de massa: cada linha da planilha gera o seu próprio edital
 for idx, row in df_criar_edital_massa.iterrows():
@@ -467,16 +475,14 @@ for idx, row in df_criar_edital_massa.iterrows():
         nome_arquivo
     )
 
-    documento = DocxTemplate(MODELO_EDITAL_MASSA)
+    documento = DocxTemplate(io.BytesIO(modelo_edital_massa_bytes))
     documento.render(contexto_edital)
     documento.save(caminho_arquivo)
 
-    # atualiza excel
-    wb = load_workbook(ARQUIVO)
+    # marca status (planilha é salva uma única vez, ao final do script)
+    aba_massa[f"H{excel_row}"] = "Edital criado"
 
-    aba = wb["Edital de Massa"]
-    aba[f"H{excel_row}"] = "Edital criado"
-
-    wb.save(ARQUIVO)
+# planilha salva uma única vez, com todas as marcações de status
+wb.save(ARQUIVO)
 
 print("Editais criados com sucesso!")

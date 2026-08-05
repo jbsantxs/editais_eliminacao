@@ -20,8 +20,9 @@ A partir de uma planilha Excel com a relação de documentos a serem eliminados,
 - [openpyxl](https://openpyxl.readthedocs.io/) — leitura/escrita do arquivo Excel (engine do pandas e atualização de status)
 - [docxtpl](https://docxtpl.readthedocs.io/) — preenchimento do template `.docx` do edital com placeholders no estilo Jinja2 (`{{ variavel }}`), preservando a formatação do Word
 - [python-docx](https://python-docx.readthedocs.io/) — biblioteca usada internamente pelo docxtpl para manipular o `.docx`
-- [num2words](https://github.com/savoirfairelinux/num2words) — conversão de quantidades numéricas por extenso (em português)
 - Bibliotecas padrão do Python: `locale`, `os`, `re`, `datetime`
+
+A conversão de quantidades numéricas por extenso é feita por uma função própria (`numero_por_extenso`), sem depender de biblioteca externa. Isso porque o [num2words](https://github.com/savoirfairelinux/num2words) não flexiona em gênero para português (`pt_BR`) — ele nem aceita o parâmetro `gender`, e sempre retorna a forma masculina (ex.: "dois", nunca "duas"). Como o script sempre se refere a "caixas" (substantivo feminino), foi implementada uma conversão própria (0 a 999.999) sempre no feminino, validada contra a saída do `num2words` (masculina, com flexão manual) em quase 30 mil números.
 
 ## Estrutura esperada
 

@@ -6,7 +6,6 @@ from datetime import datetime
 
 import pandas as pd
 from docxtpl import DocxTemplate
-from num2words import num2words
 from openpyxl import load_workbook
 
 # constantes de caminho e medidas
@@ -27,6 +26,83 @@ MODELO_EDITAL = os.path.join(MODELO, "modelo_edital.docx")
 METRAGEM_MEDIDA = 0.14  # metros lineares
 
 # funções auxiliares
+_UNIDADES = [
+    '', 'uma', 'duas', 'três', 'quatro',
+    'cinco', 'seis', 'sete', 'oito', 'nove'
+]
+
+_DEZ_A_DEZENOVE = [
+    'dez', 'onze', 'doze', 'treze', 'catorze',
+    'quinze', 'dezesseis', 'dezessete', 'dezoito', 'dezenove'
+]
+
+_DEZENAS = [
+    '', '', 'vinte', 'trinta', 'quarenta',
+    'cinquenta', 'sessenta', 'setenta', 'oitenta', 'noventa'
+]
+
+_CENTENAS = [
+    '', 'cento', 'duzentas', 'trezentas', 'quatrocentas',
+    'quinhentas', 'seiscentas', 'setecentas', 'oitocentas', 'novecentas'
+]
+
+
+def _grupo_ate_999_extenso(numero):
+    if numero == 0:
+        return ''
+
+    if numero == 100:
+        return 'cem'
+
+    centena, resto = divmod(numero, 100)
+    dezena, unidade = divmod(resto, 10)
+
+    partes = []
+
+    if centena:
+        partes.append(_CENTENAS[centena])
+
+    if 10 <= resto <= 19:
+        partes.append(_DEZ_A_DEZENOVE[resto - 10])
+    else:
+        if dezena:
+            partes.append(_DEZENAS[dezena])
+        if unidade:
+            partes.append(_UNIDADES[unidade])
+
+    return ' e '.join(partes)
+
+
+def numero_por_extenso(numero):
+    # sempre no feminino: usado só para quantidade de caixas
+    numero = int(numero)
+
+    if not 0 <= numero <= 999_999:
+        raise ValueError(
+            f"Número fora do intervalo suportado (0 a 999.999): {numero}"
+        )
+
+    if numero == 0:
+        return 'zero'
+
+    milhar, resto = divmod(numero, 1000)
+
+    if not milhar:
+        return _grupo_ate_999_extenso(resto)
+
+    texto_milhar = (
+        'mil' if milhar == 1
+        else f"{_grupo_ate_999_extenso(milhar)} mil"
+    )
+
+    if not resto:
+        return texto_milhar
+
+    conector = ' e ' if (resto < 100 or resto % 100 == 0) else ', '
+
+    return f"{texto_milhar}{conector}{_grupo_ate_999_extenso(resto)}"
+
+
 def limpar_nome(nome):
     return re.sub(r'[\\/*?:"<>|]', "_", str(nome))
 
@@ -153,11 +229,7 @@ for (processo, regiao, municipio), grupo in solicitacao:
 
         qtde_caixas = int(row['Quantidade'])
 
-        caixas_extenso = num2words(
-            qtde_caixas,
-            lang='pt_BR',
-            gender='f'
-        )
+        caixas_extenso = numero_por_extenso(qtde_caixas)
 
         if qtde_caixas == 1:
             caixas_extenso = f"({caixas_extenso}) Caixa"
@@ -198,11 +270,7 @@ for (processo, regiao, municipio), grupo in solicitacao:
     # rodapé
     total_caixas = int(grupo['Quantidade'].sum())
 
-    total_caixas_extenso = num2words(
-        total_caixas,
-        lang='pt_BR',
-        gender='f'
-    )
+    total_caixas_extenso = numero_por_extenso(total_caixas)
 
     total_metros_lineares = (
         total_caixas * METRAGEM_MEDIDA

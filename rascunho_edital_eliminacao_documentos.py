@@ -22,8 +22,10 @@ EDITAIS = os.path.join(PASTA, "Editais Elaborados")
 MODELO = os.path.join(PASTA, "Modelos")
 
 MODELO_EDITAL = os.path.join(MODELO, "modelo_edital.docx")
+MODELO_EDITAL_MASSA = os.path.join(MODELO, "modelo_edital_massa.docx")
 
-METRAGEM_MEDIDA = 0.14  # metros lineares
+METRAGEM_MEDIDA = 0.14  # metros lineares por caixa
+METROS_LINEARES_POR_METRO_CUBICO = 12  # conversão de m³ para metros lineares
 
 # funções auxiliares
 _UNIDADES = [
@@ -130,6 +132,24 @@ def extrair_chave_ordenacao(codigo):
     return [int(p) for p in str(codigo).split('.') if p.isdigit()]
 
 
+def formatar_numero_br(valor):
+    texto = f"{float(valor):.2f}"
+    if '.' in texto:
+        texto = texto.rstrip('0').rstrip('.')
+    return texto.replace('.', ',')
+
+
+def buscar_regiao_administrativa(municipio, mapa_regiao):
+    regiao = mapa_regiao.get(str(municipio).strip().lower())
+
+    if not regiao:
+        raise ValueError(
+            f"Município '{municipio}' não encontrado na aba 'Municípios'."
+        )
+
+    return regiao
+
+
 # código principal
 dataframe = pd.read_excel(
     ARQUIVO,
@@ -146,7 +166,7 @@ limpar_colunas = [
     'Observações complementares'
 ]
 
-for campo in limpar_colunas + ['Região Administrativa', 'Município']:
+for campo in limpar_colunas + ['Município']:
     dataframe[campo] = (
         dataframe[campo].fillna('').astype(str).str.strip()
     )
@@ -160,9 +180,57 @@ df_criar_edital = dataframe[
     )
 ]
 
-if df_criar_edital.empty:
+# planilha "Edital de Massa"
+dataframe_massa = pd.read_excel(
+    ARQUIVO,
+    sheet_name="Edital de Massa",
+    engine='openpyxl'
+)
+dataframe_massa.columns = [str(coluna).strip() for coluna in dataframe_massa.columns]
+
+COLUNA_PROCESSO_MASSA = (
+    "N° Processo SEI" if "N° Processo SEI" in dataframe_massa.columns
+    else "Nº Processo SEI"
+)
+
+for campo in ['Município', 'Observações complementares']:
+    dataframe_massa[campo] = (
+        dataframe_massa[campo].fillna('').astype(str).str.strip()
+    )
+
+df_criar_edital_massa = dataframe_massa[
+    dataframe_massa['Status Edital'].str.contains(
+        "Criar edital",
+        case=False,
+        na=False
+    )
+]
+
+if df_criar_edital.empty and df_criar_edital_massa.empty:
     print("Nenhum edital a ser criado.")
     exit()
+
+# município -> região administrativa
+municipios_df = pd.read_excel(
+    ARQUIVO,
+    sheet_name="Municípios",
+    engine='openpyxl'
+)
+
+municipios_df['Município'] = (
+    municipios_df['Município'].fillna('').astype(str).str.strip()
+)
+municipios_df['Região Administrativa'] = (
+    municipios_df['Região Administrativa'].fillna('').astype(str).str.strip()
+)
+
+mapa_regiao = {
+    municipio.lower(): regiao
+    for municipio, regiao in zip(
+        municipios_df['Município'],
+        municipios_df['Região Administrativa']
+    )
+}
 
 # membro da Comissão de Avaliação de Documentos e Acesso (CADA) que assina o edital
 membros = pd.read_excel(
@@ -190,11 +258,11 @@ else:
     cargo_membro = str(membros_ativos['CARGO'].iloc[0]).strip()
 
 solicitacao = df_criar_edital.groupby(
-    ['N° Processo SEI', 'Região Administrativa', 'Município'],
+    ['N° Processo SEI', 'Município'],
     dropna=False
 )
 
-for (processo, regiao, municipio), grupo in solicitacao:
+for (processo, municipio), grupo in solicitacao:
 
     # cabeçalho
     locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
@@ -203,13 +271,11 @@ for (processo, regiao, municipio), grupo in solicitacao:
         "%d de %B de %Y"
     ).upper()
 
-    regiao = str(
-        grupo['Região Administrativa'].iloc[0]
-    ).strip()
-
     municipio = str(
         grupo['Município'].iloc[0]
     ).strip()
+
+    regiao = buscar_regiao_administrativa(municipio, mapa_regiao)
 
     # limpeza das colunas
     for campo in limpar_colunas:
@@ -346,6 +412,69 @@ for (processo, regiao, municipio), grupo in solicitacao:
     for idx in grupo.index:
         excel_row = idx + 2
         aba[f"O{excel_row}"] = "Edital criado"
+
+    wb.save(ARQUIVO)
+
+# edital de massa: cada linha da planilha gera o seu próprio edital
+for idx, row in df_criar_edital_massa.iterrows():
+
+    locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
+
+    data_edital = datetime.now().strftime(
+        "%d de %B de %Y"
+    ).upper()
+
+    processo = row[COLUNA_PROCESSO_MASSA]
+    municipio = str(row['Município']).strip()
+
+    regiao = buscar_regiao_administrativa(municipio, mapa_regiao)
+
+    comprimento = float(row['Comprimento'])
+    largura = float(row['Largura'])
+    altura = float(row['Altura'])
+
+    metros_cubicos = comprimento * largura * altura
+
+    total_metros_lineares = (
+        metros_cubicos * METROS_LINEARES_POR_METRO_CUBICO
+    )
+
+    contexto_edital = {
+        "data_edital": data_edital,
+        "regiao": regiao,
+        "municipio": municipio,
+        "altura": formatar_numero_br(altura),
+        "comprimento": formatar_numero_br(comprimento),
+        "largura": formatar_numero_br(largura),
+        "metros_cubicos": formatar_numero_br(metros_cubicos),
+        "total_metros_lineares": formatar_numero_br(total_metros_lineares),
+        "observacoes_complementares": row['Observações complementares'],
+        "nome_membro": nome_membro,
+        "cargo_membro": cargo_membro
+    }
+
+    # salva documento
+    excel_row = idx + 2
+
+    nome_arquivo = (
+        f"Edital_Massa_{limpar_nome(municipio)}_"
+        f"{limpar_nome(processo)}_L{excel_row}.docx"
+    )
+
+    caminho_arquivo = os.path.join(
+        EDITAIS,
+        nome_arquivo
+    )
+
+    documento = DocxTemplate(MODELO_EDITAL_MASSA)
+    documento.render(contexto_edital)
+    documento.save(caminho_arquivo)
+
+    # atualiza excel
+    wb = load_workbook(ARQUIVO)
+
+    aba = wb["Edital de Massa"]
+    aba[f"H{excel_row}"] = "Edital criado"
 
     wb.save(ARQUIVO)
 

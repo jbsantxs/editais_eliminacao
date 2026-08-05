@@ -24,6 +24,8 @@ A partir de uma planilha Excel com a relação de documentos a serem eliminados,
 
 ## Estrutura esperada
 
+O script precisa ser executado com a pasta do SharePoint [Editais de Eliminação de Documentos](https://governosp.sharepoint.com/:f:/r/teams/DETRAN-DIVISODEGESTODOCUMENTAL/Documentos%20Compartilhados/Editais%20de%20Elimina%C3%A7%C3%A3o%20de%20Documentos?d=w159ef8b07b224315b0a4aff6c6058d69&csf=1&web=1&e=jMhxke) (DETRAN - Divisão de Gestão Documental) sincronizada localmente pelo OneDrive, no caminho definido pela constante `PASTA`. Dentro dela:
+
 - `Relacao de Expurgo.xlsx` — planilha de controle (aba "Edital de Caixa")
 - `Editais Elaborados/` — pasta de saída dos editais gerados em `.docx`
 - `Modelos/` — pasta com os modelos de texto usados no preenchimento:

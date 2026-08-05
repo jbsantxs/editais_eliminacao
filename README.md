@@ -9,7 +9,7 @@ A partir de uma planilha Excel com a relação de documentos a serem eliminados,
 - Filtra os registros marcados como **"Criar edital"**;
 - Agrupa os itens por **Número de Processo SEI**, **Região Administrativa** e **Município**;
 - Ordena os itens de cada edital pela **Série documental**;
-- Preenche modelos de texto (cabeçalho, detalhamento e rodapé) com os dados de cada grupo, incluindo a conversão de quantidades numéricas por extenso;
+- Preenche um template Word (`.docx`) com os dados de cada grupo (cabeçalho, lista de itens do detalhamento e rodapé), incluindo a conversão de quantidades numéricas por extenso;
 - Gera um documento **Word (.docx)** para cada edital, na pasta de editais elaborados;
 - Atualiza a planilha original, marcando os registros processados como **"Edital criado"**.
 
@@ -18,7 +18,8 @@ A partir de uma planilha Excel com a relação de documentos a serem eliminados,
 - **Python 3**
 - [pandas](https://pandas.pydata.org/) — leitura, filtragem, agrupamento e ordenação dos dados da planilha
 - [openpyxl](https://openpyxl.readthedocs.io/) — leitura/escrita do arquivo Excel (engine do pandas e atualização de status)
-- [python-docx](https://python-docx.readthedocs.io/) — geração dos documentos Word (.docx) dos editais
+- [docxtpl](https://docxtpl.readthedocs.io/) — preenchimento do template `.docx` do edital com placeholders no estilo Jinja2 (`{{ variavel }}`), preservando a formatação do Word
+- [python-docx](https://python-docx.readthedocs.io/) — biblioteca usada internamente pelo docxtpl para manipular o `.docx`
 - [num2words](https://github.com/savoirfairelinux/num2words) — conversão de quantidades numéricas por extenso (em português)
 - Bibliotecas padrão do Python: `locale`, `os`, `re`, `datetime`
 
@@ -28,10 +29,7 @@ O script precisa ser executado com a pasta do SharePoint [Editais de Eliminaçã
 
 - `Relacao de Expurgo.xlsx` — planilha de controle (aba "Edital de Caixa")
 - `Editais Elaborados/` — pasta de saída dos editais gerados em `.docx`
-- `Modelos/` — pasta com os modelos de texto usados no preenchimento:
-  - `modelo_cabeçalho.txt`
-  - `modelo_detalhamento.txt`
-  - `modelo_rodapé.txt`
+- `Modelos/modelo_edital.docx` — template Word único, com placeholders Jinja2 (`{{ data_edital }}`, `{{ regiao }}`, `{{ municipio }}`, `{{ total_caixas }}` etc.) e um trecho repetido para cada item do detalhamento (`{% for item in itens %} ... {% endfor %}`). Por ser um `.docx` real, a formatação (negrito, títulos, espaçamento) pode ser ajustada diretamente no Word, sem alterar o código.
 
 ## O que precisa ser melhorado
 
@@ -45,13 +43,10 @@ O script precisa ser executado com a pasta do SharePoint [Editais de Eliminaçã
 
 ### Melhorias estruturais
 
-- **Leitura repetida dos templates dentro do loop**: os arquivos de cabeçalho, detalhamento e rodapé são reabertos a cada grupo (o de detalhamento, a cada linha). Deveriam ser lidos uma única vez.
+- **Template `.docx` aberto a cada grupo processado**: o `DocxTemplate(MODELO_EDITAL)` é instanciado uma vez por grupo (já bem mais leve do que reabrir arquivo por linha, como antes). Ainda pode ser otimizado para carregar o template uma única vez fora do loop.
 - **Excel salvo a cada grupo processado**: `load_workbook`/`wb.save()` roda uma vez por grupo, reescrevendo o arquivo inteiro repetidamente. O ideal é abrir uma vez, atualizar todas as linhas e salvar uma única vez ao final.
 - **Dependência de locale do sistema operacional** para nome do mês por extenso: frágil entre máquinas diferentes; um dicionário de meses em português (ou uso de `babel`) elimina essa dependência.
-- **Documento Word gerado sem formatação real**: o `.docx` final é montado concatenando texto e criando um parágrafo por linha, o que impede negrito, títulos, tabelas etc. Vale considerar um template `.docx` real em vez de arquivos `.txt`.
-- **Caminhos fixos (hardcoded)** apontando para uma pasta específica do OneDrive de um usuário — torna o script não portátil entre máquinas/usuários.
 - **Ausência de tratamento de erros** para situações comuns: arquivo aberto no Excel/Word, planilha ou colunas ausentes, valores não numéricos em "Quantidade" etc.
 - **Uso de `exit()`** em vez de `sys.exit()` — funciona em REPL, mas não é a prática recomendada em scripts.
 - **Todo o código em nível de módulo**, sem funções (`main()`) nem `if __name__ == "__main__":` — dificulta testes, reuso e uma futura integração com uma interface gráfica.
 - **Redundância**: `regiao` e `municipio` já vêm da chave do `groupby`, mas são reatribuídos logo em seguida a partir do próprio grupo.
-- **Lógica de substituição de placeholders duplicada** em cabeçalho, detalhamento e rodapé — poderia ser extraída em uma função única reutilizável.

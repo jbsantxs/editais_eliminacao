@@ -5,8 +5,7 @@ import re
 from datetime import datetime
 
 import pandas as pd
-from docx import Document
-from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
+from docxtpl import DocxTemplate
 from num2words import num2words
 from openpyxl import load_workbook
 
@@ -23,9 +22,7 @@ ARQUIVO = os.path.join(PASTA, "Relacao de Expurgo para Rascunho.xlsx")
 EDITAIS = os.path.join(PASTA, "Editais Elaborados")
 MODELO = os.path.join(PASTA, "Modelos")
 
-MODELO_CABECALHO = os.path.join(MODELO, "modelo_cabeçalho.txt")
-MODELO_DETALHAMENTO = os.path.join(MODELO, "modelo_detalhamento.txt")
-MODELO_RODAPE = os.path.join(MODELO, "modelo_rodapé.txt")
+MODELO_EDITAL = os.path.join(MODELO, "modelo_edital.docx")
 
 METRAGEM_MEDIDA = 0.14  # metros lineares
 
@@ -95,34 +92,19 @@ solicitacao = df_criar_edital.groupby(
 for (processo, regiao, municipio), grupo in solicitacao:
 
     # cabeçalho
-    with open(MODELO_CABECALHO, "r", encoding="utf-8") as modelo:
+    locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
-        locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
+    data_edital = datetime.now().strftime(
+        "%d de %B de %Y"
+    ).upper()
 
-        data_edital = datetime.now().strftime(
-            "%d de %B de %Y"
-        ).upper()
+    regiao = str(
+        grupo['Região Administrativa'].iloc[0]
+    ).strip()
 
-        regiao = str(
-            grupo['Região Administrativa'].iloc[0]
-        ).strip()
-
-        municipio = str(
-            grupo['Município'].iloc[0]
-        ).strip()
-
-        modelo_cabecalho = modelo.read()
-
-        substituicoes_cabecalho = {
-            "{data_edital}": data_edital,
-            "{regiao}": regiao,
-            "{municipio}": municipio
-        }
-
-        cabecalho = modelo_cabecalho
-
-        for chave, valor in substituicoes_cabecalho.items():
-            cabecalho = cabecalho.replace(chave, valor)
+    municipio = str(
+        grupo['Município'].iloc[0]
+    ).strip()
 
     # limpeza das colunas
     for campo in limpar_colunas:
@@ -164,68 +146,50 @@ for (processo, regiao, municipio), grupo in solicitacao:
 
     for _, row in detalhamento.iterrows():
 
-        with open(
-            MODELO_DETALHAMENTO,
-            "r",
-            encoding="utf-8"
-        ) as detalhamento_modelo:
+        qtde_caixas = int(row['Quantidade'])
 
-            detalhamento_item = detalhamento_modelo.read()
+        caixas_extenso = num2words(
+            qtde_caixas,
+            lang='pt_BR',
+            gender='f'
+        )
 
-            qtde_caixas = int(row['Quantidade'])
+        if qtde_caixas == 1:
+            caixas_extenso = f"({caixas_extenso}) Caixa"
+        else:
+            caixas_extenso = f"({caixas_extenso}) Caixas"
 
-            caixas_extenso = num2words(
-                qtde_caixas,
-                lang='pt_BR',
-                gender='f'
-            )
+        itens_detalhamento.append({
+            "funcao": capitalizar_personalizado(
+                row['Função']
+            ).replace('_x000D_', ''),
 
-            if qtde_caixas == 1:
-                caixas_extenso = f"({caixas_extenso}) Caixa"
-            else:
-                caixas_extenso = f"({caixas_extenso}) Caixas"
+            "subfuncao": row['Subfunção']
+            .replace('_x000D_', ' ')
+            .capitalize(),
 
-            substituicoes_detalhamento = {
-                "{funcao}": capitalizar_personalizado(
-                    row['Função']
-                ).replace('_x000D_', ''),
+            "atividade": row['Atividade']
+            .replace('_x000D_', ' '),
 
-                "{subfuncao}": row['Subfunção']
+            "serie_documental": row['Série documental']
+            .replace('_x000D_', ' '),
+
+            "descricao_documental": row['Descrição documental']
+            .replace('_x000D_', ''),
+
+            "data_limite": str(row['Data Limite'])
+            .replace('_x000D_', ' '),
+
+            "qtde_caixas": str(qtde_caixas).zfill(2),
+
+            "caixas_extenso": caixas_extenso,
+
+            "observacoes_complementares": (
+                row['Observações complementares']
                 .replace('_x000D_', ' ')
-                .capitalize(),
-
-                "{atividade}": row['Atividade']
-                .replace('_x000D_', ' '),
-
-                "{serie_documental}": row['Série documental']
-                .replace('_x000D_', ' '),
-
-                "{descricao_documental}": row['Descrição documental']
-                .replace('_x000D_', ''),
-
-                "{data_limite}": str(row['Data Limite'])
-                .replace('_x000D_', ' '),
-
-                "{qtde_caixas}": str(qtde_caixas).zfill(2),
-
-                "{caixas_extenso}": caixas_extenso,
-
-                "{observacoes_complementares}": (
-                    row['Observações complementares']
-                    .replace('_x000D_', ' ')
-                    .replace('nan', '')
-                )
-            }
-
-            for chave, valor in substituicoes_detalhamento.items():
-                detalhamento_item = detalhamento_item.replace(
-                    chave,
-                    valor
-                )
-
-            itens_detalhamento.append(detalhamento_item)
-
-    DETALHAMENTO_COMPLETO = "\n".join(itens_detalhamento)
+                .replace('nan', '')
+            )
+        })
 
     # rodapé
     total_caixas = int(grupo['Quantidade'].sum())
@@ -249,31 +213,16 @@ for (processo, regiao, municipio), grupo in solicitacao:
             f"({total_caixas_extenso}) Caixas"
         )
 
-    with open(MODELO_RODAPE, "r", encoding="utf-8") as rodape:
-
-        rodape_texto = rodape.read()
-
-        substituicoes_rodape = {
-            "{total_caixas}": str(total_caixas),
-
-            "{total_caixas_extenso}": total_caixas_extenso,
-
-            "{total_metros_lineares}":
-                f"{total_metros_lineares:.2f}"
-        }
-
-    for chave, valor in substituicoes_rodape.items():
-        rodape_texto = rodape_texto.replace(
-            chave,
-            valor
-        )
-
-    edital_rodape = rodape_texto
-
     # conteúdo final
-    SALVAR_EDITAL = f"""{cabecalho}
-{DETALHAMENTO_COMPLETO}
-{edital_rodape}"""
+    contexto_edital = {
+        "data_edital": data_edital,
+        "regiao": regiao,
+        "municipio": municipio,
+        "itens": itens_detalhamento,
+        "total_caixas": str(total_caixas),
+        "total_caixas_extenso": total_caixas_extenso,
+        "total_metros_lineares": f"{total_metros_lineares:.2f}"
+    }
 
     # salva documento
     nome_arquivo = (
@@ -286,14 +235,8 @@ for (processo, regiao, municipio), grupo in solicitacao:
         nome_arquivo
     )
 
-    documento = Document()
-
-    for linha in SALVAR_EDITAL.split('\n'):
-        paragrafo = documento.add_paragraph(linha)
-        paragrafo.alignment = (
-            WD_PARAGRAPH_ALIGNMENT.JUSTIFY
-        )
-
+    documento = DocxTemplate(MODELO_EDITAL)
+    documento.render(contexto_edital)
     documento.save(caminho_arquivo)
 
     # atualiza excel

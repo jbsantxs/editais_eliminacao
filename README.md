@@ -30,3 +30,26 @@ A partir de uma planilha Excel com a relação de documentos a serem eliminados,
   - `modelo_cabeçalho.txt`
   - `modelo_detalhamento.txt`
   - `modelo_rodapé.txt`
+
+## O que precisa ser melhorado
+
+### Bugs conhecidos
+
+- **Locale incompatível com Windows** (`locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')`): o nome de locale usado é de Linux/macOS, mas os caminhos do projeto são de Windows. No Windows isso costuma lançar `locale.Error: unsupported locale setting` — provável causa do erro relatado.
+- **Coluna "Descrição documental" não sanitizada**: diferente das demais colunas de texto, ela não passa por `astype(str)` antes do `.replace()`. Se vier vazia (`NaN`) na planilha, quebra com `AttributeError: 'float' object has no attribute 'replace'`.
+- **Perda silenciosa de linhas no agrupamento do detalhamento**: o `groupby(...)` usado para montar o detalhamento descarta por padrão qualquer linha com `NaN` em uma das colunas-chave (ex.: `Data Limite` vazia), removendo o item do edital sem nenhum aviso.
+- **Formatação de data**: `str(row['Data Limite'])` imprime timestamps do pandas em formato bruto (ex.: `2026-01-01 00:00:00`) em vez de um formato de data legível (`01/01/2026`).
+- **Coluna fixa `"O{linha}"` para marcar status no Excel**: se a planilha for reorganizada, a marcação "Edital criado" passa a ser escrita na coluna errada sem qualquer erro.
+
+### Melhorias estruturais
+
+- **Leitura repetida dos templates dentro do loop**: os arquivos de cabeçalho, detalhamento e rodapé são reabertos a cada grupo (o de detalhamento, a cada linha). Deveriam ser lidos uma única vez.
+- **Excel salvo a cada grupo processado**: `load_workbook`/`wb.save()` roda uma vez por grupo, reescrevendo o arquivo inteiro repetidamente. O ideal é abrir uma vez, atualizar todas as linhas e salvar uma única vez ao final.
+- **Dependência de locale do sistema operacional** para nome do mês por extenso: frágil entre máquinas diferentes; um dicionário de meses em português (ou uso de `babel`) elimina essa dependência.
+- **Documento Word gerado sem formatação real**: o `.docx` final é montado concatenando texto e criando um parágrafo por linha, o que impede negrito, títulos, tabelas etc. Vale considerar um template `.docx` real em vez de arquivos `.txt`.
+- **Caminhos fixos (hardcoded)** apontando para uma pasta específica do OneDrive de um usuário — torna o script não portátil entre máquinas/usuários.
+- **Ausência de tratamento de erros** para situações comuns: arquivo aberto no Excel/Word, planilha ou colunas ausentes, valores não numéricos em "Quantidade" etc.
+- **Uso de `exit()`** em vez de `sys.exit()` — funciona em REPL, mas não é a prática recomendada em scripts.
+- **Todo o código em nível de módulo**, sem funções (`main()`) nem `if __name__ == "__main__":` — dificulta testes, reuso e uma futura integração com uma interface gráfica.
+- **Redundância**: `regiao` e `municipio` já vêm da chave do `groupby`, mas são reatribuídos logo em seguida a partir do próprio grupo.
+- **Lógica de substituição de placeholders duplicada** em cabeçalho, detalhamento e rodapé — poderia ser extraída em uma função única reutilizável.

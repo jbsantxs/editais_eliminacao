@@ -164,6 +164,26 @@ if df_criar_edital.empty:
     print("Nenhum edital a ser criado.")
     exit()
 
+# membro da Comissão de Avaliação de Documentos e Acesso (CADA) que assina o edital
+membros = pd.read_excel(
+    ARQUIVO,
+    sheet_name="Membros CADA",
+    engine='openpyxl'
+)
+
+membros['STATUS'] = membros['STATUS'].fillna('').astype(str).str.strip()
+
+membros_ativos = membros[membros['STATUS'].str.lower() == 'ativo']
+
+if len(membros_ativos) != 1:
+    raise ValueError(
+        "Esperado exatamente 1 membro com STATUS 'Ativo' na aba "
+        f"'Membros CADA', encontrado(s): {len(membros_ativos)}"
+    )
+
+nome_membro = str(membros_ativos['NOME'].iloc[0]).strip().upper()
+cargo_membro = str(membros_ativos['CARGO'].iloc[0]).strip()
+
 solicitacao = df_criar_edital.groupby(
     ['N° Processo SEI', 'Região Administrativa', 'Município'],
     dropna=False
@@ -293,7 +313,9 @@ for (processo, regiao, municipio), grupo in solicitacao:
         "itens": itens_detalhamento,
         "total_caixas": str(total_caixas),
         "total_caixas_extenso": total_caixas_extenso,
-        "total_metros_lineares": f"{total_metros_lineares:.2f}"
+        "total_metros_lineares": f"{total_metros_lineares:.2f}",
+        "nome_membro": nome_membro,
+        "cargo_membro": cargo_membro
     }
 
     # salva documento

@@ -12,7 +12,13 @@ from openpyxl import load_workbook
 
 # constantes de caminho e medidas
 # pasta do SharePoint (DETRAN - Divisão de Gestão Documental) sincronizada localmente
-PASTA = r"C:\Users\julia.santos\PRODESP\DETRAN - DIVISÃO DE GESTÃO DOCUMENTAL - Documentos\Editais de Eliminação de Documentos"
+# na pasta do usuário logado na máquina (ex.: C:\Users\<usuario>\...)
+PASTA = os.path.join(
+    os.path.expanduser("~"),
+    "PRODESP",
+    "DETRAN - DIVISÃO DE GESTÃO DOCUMENTAL - Documentos",
+    "Editais de Eliminação de Documentos"
+)
 ARQUIVO = os.path.join(PASTA, "Relacao de Expurgo.xlsx")
 EDITAIS = os.path.join(PASTA, "Editais Elaborados")
 MODELO = os.path.join(PASTA, "Modelos")

@@ -21,9 +21,11 @@ A partir de uma planilha Excel com a relação de documentos a serem eliminados,
 - [openpyxl](https://openpyxl.readthedocs.io/) — leitura/escrita do arquivo Excel (engine do pandas e atualização de status)
 - [docxtpl](https://docxtpl.readthedocs.io/) — preenchimento do template `.docx` do edital com placeholders no estilo Jinja2 (`{{ variavel }}`), preservando a formatação do Word
 - [python-docx](https://python-docx.readthedocs.io/) — biblioteca usada internamente pelo docxtpl para manipular o `.docx`
-- Bibliotecas padrão do Python: `locale`, `os`, `re`, `datetime`
+- Bibliotecas padrão do Python: `os`, `re`, `datetime`
 
 A conversão de quantidades numéricas por extenso (edital de caixa) é feita por uma função própria (`numero_por_extenso`), sem depender de biblioteca externa. Isso porque o [num2words](https://github.com/savoirfairelinux/num2words) não flexiona em gênero para português (`pt_BR`) — ele nem aceita o parâmetro `gender`, e sempre retorna a forma masculina (ex.: "dois", nunca "duas"). Como o script sempre se refere a "caixas" (substantivo feminino), foi implementada uma conversão própria (0 a 999.999) sempre no feminino, validada contra a saída do `num2words` (masculina, com flexão manual) em quase 30 mil números.
+
+A data por extenso do cabeçalho também é montada por uma função própria (`data_por_extenso`), com os nomes dos meses em português fixos no código — em vez de depender de `locale.setlocale`, que usa nomes de locale (`pt_BR.UTF-8`) específicos de Linux/macOS e não funciona nas máquinas Windows do DETRAN.
 
 Já o edital de massa não lida com quantidades por extenso — ele converte volume em metros cúbicos para metros lineares multiplicando por um fator fixo (`METROS_LINEARES_POR_METRO_CUBICO = 12`), e formata os números no padrão brasileiro (vírgula decimal, sem zeros à direita) através da função `formatar_numero_br`.
 
@@ -46,7 +48,6 @@ Por serem `.docx` reais, a formatação (negrito, títulos, espaçamento) de amb
 
 ### Bugs conhecidos
 
-- **Locale incompatível com Windows** (`locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')`): o nome de locale usado é de Linux/macOS, mas os caminhos do projeto são de Windows. No Windows isso costuma lançar `locale.Error: unsupported locale setting` — provável causa do erro relatado.
 - **Formatação de data**: `str(row['Data Limite'])` imprime timestamps do pandas em formato bruto (ex.: `2026-01-01 00:00:00`) em vez de um formato de data legível (`01/01/2026`).
 - **Coluna fixa `"O{linha}"` (caixa) e `"H{linha}"` (massa) para marcar status no Excel**: se a planilha for reorganizada, a marcação "Edital criado" passa a ser escrita na coluna errada sem qualquer erro.
 - **Coluna "Data do pedido" da aba "Edital de Massa" não é usada**: o script lê a coluna, mas o cabeçalho do edital de massa usa a data de hoje (`datetime.now()`), igual ao edital de caixa — não a data do pedido registrada na planilha.
@@ -55,7 +56,6 @@ Por serem `.docx` reais, a formatação (negrito, títulos, espaçamento) de amb
 
 - **Template `.docx` aberto a cada grupo processado**: o `DocxTemplate(MODELO_EDITAL)` é instanciado uma vez por grupo (já bem mais leve do que reabrir arquivo por linha, como antes). Ainda pode ser otimizado para carregar o template uma única vez fora do loop.
 - **Excel salvo a cada grupo processado**: `load_workbook`/`wb.save()` roda uma vez por grupo, reescrevendo o arquivo inteiro repetidamente. O ideal é abrir uma vez, atualizar todas as linhas e salvar uma única vez ao final.
-- **Dependência de locale do sistema operacional** para nome do mês por extenso: frágil entre máquinas diferentes; um dicionário de meses em português (ou uso de `babel`) elimina essa dependência.
 - **Ausência de tratamento de erros** para situações comuns: arquivo aberto no Excel/Word, planilha ou colunas ausentes, valores não numéricos em "Quantidade" etc.
 - **Uso de `exit()`** em vez de `sys.exit()` — funciona em REPL, mas não é a prática recomendada em scripts.
 - **Todo o código em nível de módulo**, sem funções (`main()`) nem `if __name__ == "__main__":` — dificulta testes, reuso e uma futura integração com uma interface gráfica.

@@ -1,5 +1,4 @@
 # importações de bibliotecas
-import locale
 import os
 import re
 from datetime import datetime
@@ -46,6 +45,11 @@ _DEZENAS = [
 _CENTENAS = [
     '', 'cento', 'duzentas', 'trezentas', 'quatrocentas',
     'quinhentas', 'seiscentas', 'setecentas', 'oitocentas', 'novecentas'
+]
+
+_MESES = [
+    'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+    'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
 ]
 
 
@@ -130,6 +134,11 @@ def capitalizar_personalizado(texto):
 
 def extrair_chave_ordenacao(codigo):
     return [int(p) for p in str(codigo).split('.') if p.isdigit()]
+
+
+def data_por_extenso(data):
+    # não depende do locale do sistema operacional
+    return f"{data.day:02d} de {_MESES[data.month - 1]} de {data.year}"
 
 
 def formatar_numero_br(valor):
@@ -265,11 +274,7 @@ solicitacao = df_criar_edital.groupby(
 for (processo, municipio), grupo in solicitacao:
 
     # cabeçalho
-    locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
-
-    data_edital = datetime.now().strftime(
-        "%d de %B de %Y"
-    ).upper()
+    data_edital = data_por_extenso(datetime.now()).upper()
 
     municipio = str(
         grupo['Município'].iloc[0]
@@ -418,11 +423,7 @@ for (processo, municipio), grupo in solicitacao:
 # edital de massa: cada linha da planilha gera o seu próprio edital
 for idx, row in df_criar_edital_massa.iterrows():
 
-    locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
-
-    data_edital = datetime.now().strftime(
-        "%d de %B de %Y"
-    ).upper()
+    data_edital = data_por_extenso(datetime.now()).upper()
 
     processo = row[COLUNA_PROCESSO_MASSA]
     municipio = str(row['Município']).strip()

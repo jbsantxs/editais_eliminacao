@@ -19,7 +19,7 @@ PASTA = os.path.join(
     "DETRAN - DIVISÃO DE GESTÃO DOCUMENTAL - Documentos",
     "Editais de Eliminação de Documentos"
 )
-ARQUIVO = os.path.join(PASTA, "Relacao de Expurgo.xlsx")
+ARQUIVO = os.path.join(PASTA, "Relacao de Expurgo para Rascunho.xlsx")
 EDITAIS = os.path.join(PASTA, "Editais Elaborados")
 MODELO = os.path.join(PASTA, "Modelos")
 

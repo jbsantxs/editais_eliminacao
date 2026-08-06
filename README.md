@@ -2,6 +2,8 @@
 
 Script em Python para automatizar a elaboração de rascunhos de **editais de eliminação de documentos** (expurgo) a partir de uma planilha de controle.
 
+> 📄 **Dossiê técnico para a Diretoria**: [`Documentacao/Dossie_Tecnico_Editais_Eliminacao.docx`](Documentacao/Dossie_Tecnico_Editais_Eliminacao.docx) — explica o sistema (arquitetura, fluxo de execução, regras de cálculo, validações) e traz indicadores de desempenho antes/depois da automação (outubro/2025), a partir do histórico real de editais publicados.
+
 ## Para que serve
 
 A partir de uma planilha Excel com a relação de documentos a serem eliminados, o script gera dois tipos de edital — **Edital de Caixa** (documentos catalogados, eliminados conforme a Tabela de Temporalidade) e **Edital de Massa** (documentos eliminados em bloco, ex.: por sinistro) — cada um com seu próprio template Word:

@@ -24,7 +24,7 @@ ARQUIVO = os.path.join(PASTA, "Relacao de Expurgo para Rascunho.xlsx")
 EDITAIS = os.path.join(PASTA, "Editais Elaborados")
 MODELO = os.path.join(PASTA, "Modelos")
 
-MODELO_EDITAL = os.path.join(MODELO, "modelo_edital.docx")  # CAIXA
+MODELO_EDITAL = os.path.join(MODELO, "modelo_edital_caixa.docx")  # CAIXA
 MODELO_EDITAL_MASSA = os.path.join(MODELO, "modelo_edital_massa.docx")  # MASSA
 
 METRAGEM_MEDIDA = 0.14  # CAIXA: metros lineares por caixa

@@ -31,6 +31,17 @@ O arquivo Excel e os templates `.docx` são abertos **uma única vez**, fora dos
 
 Já o edital de massa não lida com quantidades por extenso — ele converte volume em metros cúbicos para metros lineares multiplicando por um fator fixo (`METROS_LINEARES_POR_METRO_CUBICO = 12`), e formata os números no padrão brasileiro (vírgula decimal, sem zeros à direita) através da função `formatar_numero_br`.
 
+## Tratamento de erros
+
+O código principal roda dentro de um `try/except` que traduz as falhas mais comuns em mensagens diretas (sem traceback do Python) e encerra o script com `sys.exit()` (código de saída 1):
+
+- **`FileNotFoundError`** — planilha ou template não encontrados (ex.: pasta do SharePoint não sincronizada);
+- **`PermissionError`** — planilha aberta no Excel ou template aberto no Word, bloqueando a leitura/escrita;
+- **`KeyError`** — coluna esperada não existe na aba (cabeçalho renomeado ou removido);
+- **`ValueError`** — inclui aba inexistente na planilha (ex.: "Municípios" renomeada), valor não numérico em "Quantidade"/"Comprimento"/"Largura"/"Altura", município ausente na aba "Municípios" e mais de um membro "Ativo" na aba "Membros CADA".
+
+O caso de "Nenhum edital a ser criado" não é um erro — usa `sys.exit()` sem mensagem de erro (código de saída 0), e não é capturado pelos `except` acima (`SystemExit` não herda de `Exception`).
+
 ## Estrutura esperada
 
 O script precisa ser executado com a pasta do SharePoint [Editais de Eliminação de Documentos](https://governosp.sharepoint.com/:f:/r/teams/DETRAN-DIVISODEGESTODOCUMENTAL/Documentos%20Compartilhados/Editais%20de%20Elimina%C3%A7%C3%A3o%20de%20Documentos?d=w159ef8b07b224315b0a4aff6c6058d69&csf=1&web=1&e=jMhxke) (DETRAN - Divisão de Gestão Documental) sincronizada localmente pelo OneDrive. O caminho é montado dinamicamente a partir da pasta do usuário logado na máquina (`C:\Users\<usuario>\PRODESP\DETRAN - DIVISÃO DE GESTÃO DOCUMENTAL - Documentos\Editais de Eliminação de Documentos`), então o script funciona em qualquer computador sem precisar alterar o código. Dentro dela:
@@ -56,7 +67,4 @@ Por serem `.docx` reais, a formatação (negrito, títulos, espaçamento) de amb
 
 ### Melhorias estruturais
 
-- **Ausência de tratamento de erros** para situações comuns: arquivo aberto no Excel/Word, planilha ou colunas ausentes, valores não numéricos em "Quantidade" etc.
-- **Uso de `exit()`** em vez de `sys.exit()` — funciona em REPL, mas não é a prática recomendada em scripts.
 - **Todo o código em nível de módulo**, sem funções (`main()`) nem `if __name__ == "__main__":` — dificulta testes, reuso e uma futura integração com uma interface gráfica.
-- **Redundância**: `municipio` já vem da chave do `groupby` (edital de caixa), mas é reatribuído logo em seguida a partir do próprio grupo.

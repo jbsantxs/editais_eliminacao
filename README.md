@@ -31,6 +31,17 @@ O arquivo Excel e os templates `.docx` são abertos **uma única vez**, fora dos
 
 Já o edital de massa não lida com quantidades por extenso — ele converte volume em metros cúbicos para metros lineares multiplicando por um fator fixo (`METROS_LINEARES_POR_METRO_CUBICO = 12`), e formata os números no padrão brasileiro (vírgula decimal, sem zeros à direita) através da função `formatar_numero_br`.
 
+Toda célula de texto lida da planilha passa pela função `limpar_texto`, que corrige na origem o artefato `_x000D_` (como o Excel grava uma quebra de linha manual — Alt+Enter — dentro de uma célula, quando o openpyxl não converte esse código de volta para uma quebra de linha de verdade). Como a limpeza acontece uma única vez, no carregamento de cada planilha, o restante do código nunca precisa lidar com esse artefato item por item.
+
+## Organização do código
+
+O código é dividido em funções, agrupadas em três blocos (com comentários no próprio arquivo indicando cada um):
+
+- **Comuns a CAIXA e MASSA**: funções auxiliares (`numero_por_extenso`, `limpar_texto`, `data_por_extenso` etc.) e leitura das abas compartilhadas (`carregar_mapa_regiao`, `carregar_membro_assinante`);
+- **Edital de Caixa**: `carregar_editais_caixa`, `montar_itens_detalhamento_caixa`, `gerar_edital_caixa` (um edital) e `gerar_editais_caixa` (todos os editais);
+- **Edital de Massa**: `carregar_editais_massa`, `gerar_edital_massa` (um edital) e `gerar_editais_massa` (todos os editais);
+- **`main()`**: orquestra as chamadas acima dentro do `try/except` e é o ponto de entrada do script (`if __name__ == "__main__":`).
+
 ## Tratamento de erros
 
 O código principal roda dentro de um `try/except` que traduz as falhas mais comuns em mensagens diretas (sem traceback do Python) e encerra o script com `sys.exit()` (código de saída 1):
@@ -64,7 +75,3 @@ Por serem `.docx` reais, a formatação (negrito, títulos, espaçamento) de amb
 - **Formatação de data**: `str(row['Data Limite'])` imprime timestamps do pandas em formato bruto (ex.: `2026-01-01 00:00:00`) em vez de um formato de data legível (`01/01/2026`).
 - **Coluna fixa `"O{linha}"` (caixa) e `"H{linha}"` (massa) para marcar status no Excel**: se a planilha for reorganizada, a marcação "Edital criado" passa a ser escrita na coluna errada sem qualquer erro.
 - **Coluna "Data do pedido" da aba "Edital de Massa" não é usada**: o script lê a coluna, mas o cabeçalho do edital de massa usa a data de hoje (`datetime.now()`), igual ao edital de caixa — não a data do pedido registrada na planilha.
-
-### Melhorias estruturais
-
-- **Todo o código em nível de módulo**, sem funções (`main()`) nem `if __name__ == "__main__":` — dificulta testes, reuso e uma futura integração com uma interface gráfica.

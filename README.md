@@ -61,7 +61,7 @@ O script precisa ser executado com a pasta do SharePoint [Editais de Eliminaçã
 
 - `Relacao de Expurgo para Rascunho.xlsx` — planilha de controle, com quatro abas:
   - `Edital de Caixa` — relação de documentos catalogados a eliminar (Nº Processo SEI, Município, Função, Subfunção, Atividade, Série documental, Descrição documental, Data Limite, Quantidade, Observações complementares, Status Edital). Várias linhas com o mesmo **Nº Processo SEI + Município** viram um único edital, com um item para cada linha
-  - `Edital de Massa` — documentos eliminados em bloco (Data do pedido, Nº Processo SEI, Município, Comprimento, Largura, Altura, Observações complementares, Status Edital). **Cada linha gera o seu próprio edital** (sem agrupamento). O volume em m³ é Comprimento × Largura × Altura, convertido em metros lineares
+  - `Edital de Massa` — documentos eliminados em bloco (Data do pedido, Nº Processo SEI, Município, Comprimento, Largura, Altura, Observações complementares, Status Edital). **Cada linha gera o seu próprio edital** (sem agrupamento). O volume em m³ é Comprimento × Largura × Altura, convertido em metros lineares. A coluna "Data do pedido" é apenas de referência manual dos digitadores — não é lida pelo script (o cabeçalho do edital usa a data de hoje)
   - `Municípios` — colunas `Município` e `Região Administrativa`, usada como referência para preencher a região administrativa no cabeçalho de ambos os tipos de edital. Município não cadastrado nesta aba interrompe o script com erro
   - `Membros CADA` — colunas `NOME`, `CARGO` e `STATUS`; o membro com `STATUS` "Ativo" é quem assina o edital. Se nenhum membro estiver "Ativo", assina fixo "IARA LOPES DA SILVA" / "Coordenadora". O script para com erro apenas se houver **mais de um** membro "Ativo" ao mesmo tempo (assinatura ambígua)
 - `Editais Elaborados/` — pasta de saída dos editais gerados em `.docx`
@@ -70,8 +70,3 @@ O script precisa ser executado com a pasta do SharePoint [Editais de Eliminaçã
 
 Por serem `.docx` reais, a formatação (negrito, títulos, espaçamento) de ambos os templates pode ser ajustada diretamente no Word, sem alterar o código.
 
-## O que precisa ser melhorado
-
-### Bugs conhecidos
-
-- **Coluna "Data do pedido" da aba "Edital de Massa" não é usada**: o script lê a coluna, mas o cabeçalho do edital de massa usa a data de hoje (`datetime.now()`), igual ao edital de caixa — não a data do pedido registrada na planilha.

@@ -1,5 +1,6 @@
 # importações de bibliotecas
 import io
+import math
 import os
 import re
 import sys
@@ -134,6 +135,16 @@ def limpar_texto(valor):
     return str(valor).replace('_x000D_', ' ').strip()
 
 
+def formatar_data_limite(valor):
+    # CAIXA: formata como DD/MM/AAAA quando a célula é lida como data pelo
+    # pandas (Timestamp); mantém o texto como está nos demais casos
+    if pd.isna(valor):
+        return ''
+    if isinstance(valor, datetime):
+        return valor.strftime("%d/%m/%Y")
+    return limpar_texto(valor)
+
+
 def capitalizar_personalizado(texto):
     # CAIXA: capitaliza cada palavra, exceto preposições/artigos no meio da frase
     conectores = {
@@ -172,6 +183,28 @@ def formatar_numero_br(valor):
     return texto.replace('.', ',')
 
 
+def numero_obrigatorio(valor, campo):
+    """
+    MASSA: converte para número, exigindo que a célula não esteja vazia
+    nem contenha texto não numérico. Sem essa checagem, uma célula vazia
+    vira NaN e float(NaN) não gera erro — o valor apareceria como o
+    texto literal "nan" no edital gerado, sem qualquer aviso.
+    """
+    try:
+        numero = float(valor)
+    except (TypeError, ValueError):
+        raise ValueError(
+            f"Valor inválido para '{campo}': '{valor}' não é um número."
+        )
+
+    if math.isnan(numero):
+        raise ValueError(
+            f"Valor ausente para '{campo}': célula vazia na planilha."
+        )
+
+    return numero
+
+
 def buscar_regiao_administrativa(municipio, mapa_regiao):
     # usado por CAIXA e MASSA: região administrativa do cabeçalho do edital
     regiao = mapa_regiao.get(str(municipio).strip().lower())
@@ -182,6 +215,22 @@ def buscar_regiao_administrativa(municipio, mapa_regiao):
         )
 
     return regiao
+
+
+def localizar_coluna_status(aba):
+    """
+    Usado por CAIXA e MASSA: encontra a letra da coluna "Status Edital"
+    pelo título do cabeçalho (linha 1), em vez de depender de uma posição
+    fixa — assim, inserir uma coluna nova na planilha não faz a marcação
+    "Edital criado" ser escrita na célula errada.
+    """
+    for celula in aba[1]:
+        if str(celula.value).strip().lower() == "status edital":
+            return celula.column_letter
+
+    raise ValueError(
+        f"Coluna 'Status Edital' não encontrada na aba '{aba.title}'."
+    )
 
 
 # ============================================================
@@ -320,7 +369,7 @@ def montar_itens_detalhamento_caixa(grupo):
             "atividade": row['Atividade'],
             "serie_documental": row['Série documental'],
             "descricao_documental": row['Descrição documental'],
-            "data_limite": limpar_texto(row['Data Limite']),
+            "data_limite": formatar_data_limite(row['Data Limite']),
             "qtde_caixas": str(qtde_caixas).zfill(2),
             "caixas_extenso": caixas_extenso,
             "observacoes_complementares": row['Observações complementares']
@@ -331,7 +380,7 @@ def montar_itens_detalhamento_caixa(grupo):
 
 def gerar_edital_caixa(
     processo, municipio, grupo, mapa_regiao,
-    nome_membro, cargo_membro, modelo_edital_bytes, aba_caixa
+    nome_membro, cargo_membro, modelo_edital_bytes, aba_caixa, coluna_status
 ):
     """
     Gera o .docx de um único edital de caixa (um grupo de N° Processo SEI
@@ -343,8 +392,11 @@ def gerar_edital_caixa(
     regiao = buscar_regiao_administrativa(municipio, mapa_regiao)
     itens_detalhamento = montar_itens_detalhamento_caixa(grupo)
 
-    # rodapé: total de caixas e conversão para metros lineares
-    total_caixas = int(grupo['Quantidade'].sum())
+    # rodapé: total de caixas somado a partir dos itens já exibidos no
+    # corpo do edital (não das linhas brutas), para o total nunca ficar
+    # maior do que a soma do que está listado — linhas duplicadas do
+    # mesmo item são agrupadas em montar_itens_detalhamento_caixa
+    total_caixas = sum(int(item["qtde_caixas"]) for item in itens_detalhamento)
     total_caixas_extenso = numero_por_extenso(total_caixas)
     total_caixas_extenso = (
         f"({total_caixas_extenso}) Caixa" if total_caixas == 1
@@ -376,12 +428,12 @@ def gerar_edital_caixa(
 
     for idx in grupo.index:
         excel_row = idx + 2
-        aba_caixa[f"O{excel_row}"] = "Edital criado"
+        aba_caixa[f"{coluna_status}{excel_row}"] = "Edital criado"
 
 
 def gerar_editais_caixa(
     df_criar_edital, mapa_regiao,
-    nome_membro, cargo_membro, modelo_edital_bytes, aba_caixa
+    nome_membro, cargo_membro, modelo_edital_bytes, aba_caixa, coluna_status
 ):
     """Percorre todos os grupos (N° Processo SEI + Município) da aba de caixa e gera um edital para cada um."""
     solicitacao = df_criar_edital.groupby(
@@ -392,7 +444,7 @@ def gerar_editais_caixa(
     for (processo, municipio), grupo in solicitacao:
         gerar_edital_caixa(
             processo, municipio, grupo, mapa_regiao,
-            nome_membro, cargo_membro, modelo_edital_bytes, aba_caixa
+            nome_membro, cargo_membro, modelo_edital_bytes, aba_caixa, coluna_status
         )
 
 
@@ -435,7 +487,7 @@ def carregar_editais_massa(arquivo):
 
 def gerar_edital_massa(
     idx, row, coluna_processo_massa, mapa_regiao,
-    nome_membro, cargo_membro, modelo_edital_massa_bytes, aba_massa
+    nome_membro, cargo_membro, modelo_edital_massa_bytes, aba_massa, coluna_status
 ):
     """
     Gera o .docx de um único edital de massa (cada linha da planilha é
@@ -450,9 +502,9 @@ def gerar_edital_massa(
     regiao = buscar_regiao_administrativa(municipio, mapa_regiao)
 
     # volume em metros cúbicos e conversão para metros lineares
-    comprimento = float(row['Comprimento'])
-    largura = float(row['Largura'])
-    altura = float(row['Altura'])
+    comprimento = numero_obrigatorio(row['Comprimento'], 'Comprimento')
+    largura = numero_obrigatorio(row['Largura'], 'Largura')
+    altura = numero_obrigatorio(row['Altura'], 'Altura')
     metros_cubicos = comprimento * largura * altura
     total_metros_lineares = metros_cubicos * METROS_LINEARES_POR_METRO_CUBICO
 
@@ -481,18 +533,18 @@ def gerar_edital_massa(
     documento.render(contexto_edital)
     documento.save(caminho_arquivo)
 
-    aba_massa[f"H{excel_row}"] = "Edital criado"
+    aba_massa[f"{coluna_status}{excel_row}"] = "Edital criado"
 
 
 def gerar_editais_massa(
     df_criar_edital_massa, coluna_processo_massa, mapa_regiao,
-    nome_membro, cargo_membro, modelo_edital_massa_bytes, aba_massa
+    nome_membro, cargo_membro, modelo_edital_massa_bytes, aba_massa, coluna_status
 ):
     """Percorre cada linha da aba de massa e gera um edital por linha (sem agrupamento)."""
     for idx, row in df_criar_edital_massa.iterrows():
         gerar_edital_massa(
             idx, row, coluna_processo_massa, mapa_regiao,
-            nome_membro, cargo_membro, modelo_edital_massa_bytes, aba_massa
+            nome_membro, cargo_membro, modelo_edital_massa_bytes, aba_massa, coluna_status
         )
 
 
@@ -520,6 +572,11 @@ def main():
         aba_caixa = wb["Edital de Caixa"]
         aba_massa = wb["Edital de Massa"]
 
+        # coluna "Status Edital" localizada pelo título do cabeçalho, não por
+        # posição fixa — continua correta mesmo se colunas forem inseridas
+        coluna_status_caixa = localizar_coluna_status(aba_caixa)
+        coluna_status_massa = localizar_coluna_status(aba_massa)
+
         # CAIXA: gera um edital por grupo (N° Processo SEI + Município)
         if not df_criar_edital.empty:
             with open(MODELO_EDITAL, 'rb') as arquivo_modelo:
@@ -527,7 +584,8 @@ def main():
 
             gerar_editais_caixa(
                 df_criar_edital, mapa_regiao,
-                nome_membro, cargo_membro, modelo_edital_bytes, aba_caixa
+                nome_membro, cargo_membro, modelo_edital_bytes, aba_caixa,
+                coluna_status_caixa
             )
 
         # MASSA: gera um edital por linha da planilha
@@ -537,7 +595,8 @@ def main():
 
             gerar_editais_massa(
                 df_criar_edital_massa, coluna_processo_massa, mapa_regiao,
-                nome_membro, cargo_membro, modelo_edital_massa_bytes, aba_massa
+                nome_membro, cargo_membro, modelo_edital_massa_bytes, aba_massa,
+                coluna_status_massa
             )
 
         # planilha salva uma única vez, com todas as marcações de status (CAIXA e MASSA)

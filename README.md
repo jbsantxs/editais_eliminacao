@@ -51,7 +51,7 @@ O código principal roda dentro de um `try/except` que traduz as falhas mais com
 - **`FileNotFoundError`** — planilha ou template não encontrados (ex.: pasta do SharePoint não sincronizada);
 - **`PermissionError`** — planilha aberta no Excel ou template aberto no Word, bloqueando a leitura/escrita;
 - **`KeyError`** — coluna esperada não existe na aba (cabeçalho renomeado ou removido);
-- **`ValueError`** — inclui aba inexistente na planilha (ex.: "Municípios" renomeada), valor não numérico em "Quantidade"/"Comprimento"/"Largura"/"Altura", município ausente na aba "Municípios" e mais de um membro "Ativo" na aba "Membros CADA".
+- **`ValueError`** — inclui aba inexistente na planilha (ex.: "Municípios" renomeada), valor ausente ou não numérico em "Quantidade" (caixa) ou em "Comprimento"/"Largura"/"Altura" (massa), coluna "Status Edital" não encontrada, município ausente na aba "Municípios" e mais de um membro "Ativo" na aba "Membros CADA".
 
 O caso de "Nenhum edital a ser criado" não é um erro — usa `sys.exit()` sem mensagem de erro (código de saída 0), e não é capturado pelos `except` acima (`SystemExit` não herda de `Exception`).
 
@@ -74,6 +74,4 @@ Por serem `.docx` reais, a formatação (negrito, títulos, espaçamento) de amb
 
 ### Bugs conhecidos
 
-- **Formatação de data**: `str(row['Data Limite'])` imprime timestamps do pandas em formato bruto (ex.: `2026-01-01 00:00:00`) em vez de um formato de data legível (`01/01/2026`).
-- **Coluna fixa `"O{linha}"` (caixa) e `"H{linha}"` (massa) para marcar status no Excel**: se a planilha for reorganizada, a marcação "Edital criado" passa a ser escrita na coluna errada sem qualquer erro.
 - **Coluna "Data do pedido" da aba "Edital de Massa" não é usada**: o script lê a coluna, mas o cabeçalho do edital de massa usa a data de hoje (`datetime.now()`), igual ao edital de caixa — não a data do pedido registrada na planilha.

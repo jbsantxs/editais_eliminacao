@@ -155,7 +155,8 @@ def quebrar_data_limite(texto):
     "2001/2002/2003/2004/2005/2006/2007/2008"), a equipe de publicação do
     Diário Oficial quebra a linha manualmente por questão de espaço.
     Reproduz essa quebra automaticamente: até 6 anos na primeira linha e
-    até 8 anos nas linhas seguintes (cada uma reiniciando com "/").
+    até 8 anos nas linhas seguintes, com a "/" de continuação no final de
+    cada linha (não no início da próxima).
     Devolve um docxtpl.Listing, que insere quebras de linha reais no
     Word preservando a formatação do template.
     """
@@ -164,12 +165,17 @@ def quebrar_data_limite(texto):
     if len(tokens) <= QUEBRA_DATA_LIMITE_PRIMEIRA_LINHA:
         return Listing(texto)
 
-    linhas = ['/'.join(tokens[:QUEBRA_DATA_LIMITE_PRIMEIRA_LINHA])]
+    blocos = [tokens[:QUEBRA_DATA_LIMITE_PRIMEIRA_LINHA]]
 
     resto = tokens[QUEBRA_DATA_LIMITE_PRIMEIRA_LINHA:]
     for inicio in range(0, len(resto), QUEBRA_DATA_LIMITE_PROXIMAS_LINHAS):
-        bloco = resto[inicio:inicio + QUEBRA_DATA_LIMITE_PROXIMAS_LINHAS]
-        linhas.append('/' + '/'.join(bloco))
+        blocos.append(resto[inicio:inicio + QUEBRA_DATA_LIMITE_PROXIMAS_LINHAS])
+
+    ultimo_bloco = len(blocos) - 1
+    linhas = [
+        '/'.join(bloco) + ('/' if indice != ultimo_bloco else '')
+        for indice, bloco in enumerate(blocos)
+    ]
 
     return Listing('\n'.join(linhas))
 

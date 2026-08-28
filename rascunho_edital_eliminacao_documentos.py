@@ -180,6 +180,28 @@ def quebrar_data_limite(texto):
     return Listing('\n'.join(linhas))
 
 
+QUEBRA_DESCRICAO_PALAVRAS_POR_LINHA = 6  # CAIXA: palavras por linha na Descrição documental
+
+
+def quebrar_descricao_documental(texto):
+    """
+    CAIXA: quebra a Descrição documental a cada 6 palavras completas,
+    mesma técnica de quebrar_data_limite (docxtpl.Listing insere uma
+    quebra de linha real no Word, preservando a formatação do template).
+    """
+    palavras = texto.split()
+
+    if len(palavras) <= QUEBRA_DESCRICAO_PALAVRAS_POR_LINHA:
+        return Listing(texto)
+
+    linhas = [
+        ' '.join(palavras[inicio:inicio + QUEBRA_DESCRICAO_PALAVRAS_POR_LINHA])
+        for inicio in range(0, len(palavras), QUEBRA_DESCRICAO_PALAVRAS_POR_LINHA)
+    ]
+
+    return Listing('\n'.join(linhas))
+
+
 def capitalizar_personalizado(texto):
     # CAIXA: capitaliza cada palavra, exceto preposições/artigos no meio da frase
     conectores = {
@@ -403,7 +425,7 @@ def montar_itens_detalhamento_caixa(grupo):
             "subfuncao": row['Subfunção'].capitalize(),
             "atividade": row['Atividade'],
             "serie_documental": row['Série documental'],
-            "descricao_documental": row['Descrição documental'],
+            "descricao_documental": quebrar_descricao_documental(row['Descrição documental']),
             "data_limite": quebrar_data_limite(formatar_data_limite(row['Data Limite'])),
             "qtde_caixas": str(qtde_caixas).zfill(2),
             "caixas_extenso": caixas_extenso,

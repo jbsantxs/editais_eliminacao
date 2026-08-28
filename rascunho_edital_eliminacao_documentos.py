@@ -7,7 +7,7 @@ import sys
 from datetime import datetime
 
 import pandas as pd
-from docxtpl import DocxTemplate
+from docxtpl import DocxTemplate, Listing
 from openpyxl import load_workbook
 
 # ============================================================
@@ -143,6 +143,35 @@ def formatar_data_limite(valor):
     if isinstance(valor, datetime):
         return valor.strftime("%d/%m/%Y")
     return limpar_texto(valor)
+
+
+QUEBRA_DATA_LIMITE_PRIMEIRA_LINHA = 6  # CAIXA: anos na 1ª linha da Data Limite
+QUEBRA_DATA_LIMITE_PROXIMAS_LINHAS = 8  # CAIXA: anos por linha nas seguintes
+
+
+def quebrar_data_limite(texto):
+    """
+    CAIXA: quando a Data Limite lista muitos anos separados por "/" (ex.:
+    "2001/2002/2003/2004/2005/2006/2007/2008"), a equipe de publicação do
+    Diário Oficial quebra a linha manualmente por questão de espaço.
+    Reproduz essa quebra automaticamente: até 6 anos na primeira linha e
+    até 8 anos nas linhas seguintes (cada uma reiniciando com "/").
+    Devolve um docxtpl.Listing, que insere quebras de linha reais no
+    Word preservando a formatação do template.
+    """
+    tokens = texto.split('/')
+
+    if len(tokens) <= QUEBRA_DATA_LIMITE_PRIMEIRA_LINHA:
+        return Listing(texto)
+
+    linhas = ['/'.join(tokens[:QUEBRA_DATA_LIMITE_PRIMEIRA_LINHA])]
+
+    resto = tokens[QUEBRA_DATA_LIMITE_PRIMEIRA_LINHA:]
+    for inicio in range(0, len(resto), QUEBRA_DATA_LIMITE_PROXIMAS_LINHAS):
+        bloco = resto[inicio:inicio + QUEBRA_DATA_LIMITE_PROXIMAS_LINHAS]
+        linhas.append('/' + '/'.join(bloco))
+
+    return Listing('\n'.join(linhas))
 
 
 def capitalizar_personalizado(texto):
@@ -369,7 +398,7 @@ def montar_itens_detalhamento_caixa(grupo):
             "atividade": row['Atividade'],
             "serie_documental": row['Série documental'],
             "descricao_documental": row['Descrição documental'],
-            "data_limite": formatar_data_limite(row['Data Limite']),
+            "data_limite": quebrar_data_limite(formatar_data_limite(row['Data Limite'])),
             "qtde_caixas": str(qtde_caixas).zfill(2),
             "caixas_extenso": caixas_extenso,
             "observacoes_complementares": row['Observações complementares']

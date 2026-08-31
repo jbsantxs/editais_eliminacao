@@ -180,26 +180,26 @@ def quebrar_data_limite(texto):
     return Listing('\n'.join(linhas))
 
 
-QUEBRA_DESCRICAO_PALAVRAS_POR_LINHA = 6  # CAIXA: palavras por linha na Descrição documental
+QUEBRA_DESCRICAO_PALAVRAS_PRIMEIRA_LINHA = 7  # CAIXA: palavras na 1ª linha da Descrição documental
 
 
 def quebrar_descricao_documental(texto):
     """
-    CAIXA: quebra a Descrição documental a cada 6 palavras completas,
-    mesma técnica de quebrar_data_limite (docxtpl.Listing insere uma
-    quebra de linha real no Word, preservando a formatação do template).
+    CAIXA: quebra a Descrição documental uma única vez, após 7 palavras
+    completas — o restante do texto continua na segunda linha, sem
+    quebrar de novo (só uma quebra, no máximo 2 linhas). Mesma técnica
+    de quebrar_data_limite (docxtpl.Listing insere uma quebra de linha
+    real no Word, preservando a formatação do template).
     """
     palavras = texto.split()
 
-    if len(palavras) <= QUEBRA_DESCRICAO_PALAVRAS_POR_LINHA:
+    if len(palavras) <= QUEBRA_DESCRICAO_PALAVRAS_PRIMEIRA_LINHA:
         return Listing(texto)
 
-    linhas = [
-        ' '.join(palavras[inicio:inicio + QUEBRA_DESCRICAO_PALAVRAS_POR_LINHA])
-        for inicio in range(0, len(palavras), QUEBRA_DESCRICAO_PALAVRAS_POR_LINHA)
-    ]
+    primeira_linha = ' '.join(palavras[:QUEBRA_DESCRICAO_PALAVRAS_PRIMEIRA_LINHA])
+    resto = ' '.join(palavras[QUEBRA_DESCRICAO_PALAVRAS_PRIMEIRA_LINHA:])
 
-    return Listing('\n'.join(linhas))
+    return Listing(f"{primeira_linha}\n{resto}")
 
 
 def capitalizar_personalizado(texto):

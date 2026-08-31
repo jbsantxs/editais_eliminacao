@@ -279,7 +279,7 @@ def localizar_coluna_status(aba):
     Usado por CAIXA e MASSA: encontra a letra da coluna "Status Edital"
     pelo título do cabeçalho (linha 1), em vez de depender de uma posição
     fixa — assim, inserir uma coluna nova na planilha não faz a marcação
-    "Edital criado para teste" ser escrita na célula errada.
+    "Edital criado" ser escrita na célula errada.
     """
     for celula in aba[1]:
         if str(celula.value).strip().lower() == "status edital":
@@ -318,7 +318,7 @@ def carregar_mapa_regiao(arquivo):
 def carregar_membro_assinante(arquivo):
     """
     Lê a aba 'Membros CADA' e devolve (nome, cargo) de quem assina o
-    edital: o membro com STATUS 'Ativo'. Se ninguém estiver ativo, assina
+    edital: o membro com Status 'Ativo'. Se ninguém estiver ativo, assina
     a coordenadora padrão. Usado tanto por CAIXA quanto por MASSA.
     """
     membros = pd.read_excel(
@@ -327,13 +327,13 @@ def carregar_membro_assinante(arquivo):
         engine='openpyxl'
     )
 
-    membros['STATUS'] = membros['STATUS'].apply(limpar_texto)
+    membros['Status'] = membros['Status'].apply(limpar_texto)
 
-    membros_ativos = membros[membros['STATUS'].str.lower() == 'ativo']
+    membros_ativos = membros[membros['Status'].str.lower() == 'ativo']
 
     if len(membros_ativos) > 1:
         raise ValueError(
-            "Esperado no máximo 1 membro com STATUS 'Ativo' na aba "
+            "Esperado no máximo 1 membro com Status 'Ativo' na aba "
             f"'Membros CADA', encontrado(s): {len(membros_ativos)}"
         )
 
@@ -442,7 +442,7 @@ def gerar_edital_caixa(
     """
     Gera o .docx de um único edital de caixa (um grupo de N° Processo SEI
     + Município, com um item para cada linha da planilha) e marca as
-    linhas correspondentes como 'Edital criado para teste' na planilha, em
+    linhas correspondentes como 'Edital criado' na planilha, em
     memória (o arquivo Excel é salvo uma única vez, no final do script).
     """
     data_edital = data_por_extenso(datetime.now()).upper()
@@ -485,7 +485,7 @@ def gerar_edital_caixa(
 
     for idx in grupo.index:
         excel_row = idx + 2
-        aba_caixa[f"{coluna_status}{excel_row}"] = "Edital criado para teste"
+        aba_caixa[f"{coluna_status}{excel_row}"] = "Edital criado"
 
 
 def gerar_editais_caixa(
@@ -590,7 +590,7 @@ def gerar_edital_massa(
     documento.render(contexto_edital)
     documento.save(caminho_arquivo)
 
-    aba_massa[f"{coluna_status}{excel_row}"] = "Edital criado para teste"
+    aba_massa[f"{coluna_status}{excel_row}"] = "Edital criado"
 
 
 def gerar_editais_massa(

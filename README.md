@@ -14,7 +14,7 @@ A partir de uma planilha Excel com a relação de documentos a serem eliminados,
 - **Edital de Caixa**: agrupa os itens por **Número de Processo SEI** e **Município**, ordena pela **Série documental** e preenche o template com o detalhamento de cada item, incluindo a conversão de quantidades por extenso;
 - **Edital de Massa**: cada linha da planilha gera o seu próprio edital — calcula o **Volume em metros cúbicos** (Comprimento × Largura × Altura) e o converte em **Total de Metros Lineares**;
 - Gera um documento **Word (.docx)** para cada edital, na pasta de editais elaborados;
-- Atualiza a planilha original, marcando os registros processados como **"Edital criado"**.
+- Atualiza a planilha original, marcando os registros processados como **"Edital criado para teste"**.
 
 ## Tecnologias utilizadas
 
@@ -35,7 +35,7 @@ A conversão de quantidades numéricas por extenso (edital de caixa) é feita po
 
 A data por extenso do cabeçalho também é montada por uma função própria (`data_por_extenso`), com os nomes dos meses em português fixos no código — em vez de depender de `locale.setlocale`, que usa nomes de locale (`pt_BR.UTF-8`) específicos de Linux/macOS e não funciona nas máquinas Windows do DETRAN.
 
-O arquivo Excel e os templates `.docx` são abertos **uma única vez**, fora dos loops de geração: `load_workbook(ARQUIVO)` roda uma vez no início e `wb.save(ARQUIVO)` uma vez no final (marcando "Edital criado" em memória a cada edital gerado, sem resalvar a cada iteração); os bytes de cada template são lidos do disco uma vez e reutilizados via `io.BytesIO` para instanciar um `DocxTemplate` novo a cada edital (o docxtpl exige uma instância nova por render, mas isso evita reabrir o arquivo do disco a cada vez).
+O arquivo Excel e os templates `.docx` são abertos **uma única vez**, fora dos loops de geração: `load_workbook(ARQUIVO)` roda uma vez no início e `wb.save(ARQUIVO)` uma vez no final (marcando "Edital criado para teste" em memória a cada edital gerado, sem resalvar a cada iteração); os bytes de cada template são lidos do disco uma vez e reutilizados via `io.BytesIO` para instanciar um `DocxTemplate` novo a cada edital (o docxtpl exige uma instância nova por render, mas isso evita reabrir o arquivo do disco a cada vez).
 
 Já o edital de massa não lida com quantidades por extenso — ele converte volume em metros cúbicos para metros lineares multiplicando por um fator fixo (`METROS_LINEARES_POR_METRO_CUBICO = 12`), e formata os números no padrão brasileiro (vírgula decimal, sem zeros à direita) através da função `formatar_numero_br`.
 

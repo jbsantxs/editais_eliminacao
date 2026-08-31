@@ -279,7 +279,7 @@ def localizar_coluna_status(aba):
     Usado por CAIXA e MASSA: encontra a letra da coluna "Status Edital"
     pelo título do cabeçalho (linha 1), em vez de depender de uma posição
     fixa — assim, inserir uma coluna nova na planilha não faz a marcação
-    "Edital criado" ser escrita na célula errada.
+    "Edital criado para teste" ser escrita na célula errada.
     """
     for celula in aba[1]:
         if str(celula.value).strip().lower() == "status edital":
@@ -442,8 +442,8 @@ def gerar_edital_caixa(
     """
     Gera o .docx de um único edital de caixa (um grupo de N° Processo SEI
     + Município, com um item para cada linha da planilha) e marca as
-    linhas correspondentes como 'Edital criado' na planilha, em memória
-    (o arquivo Excel é salvo uma única vez, no final do script).
+    linhas correspondentes como 'Edital criado para teste' na planilha, em
+    memória (o arquivo Excel é salvo uma única vez, no final do script).
     """
     data_edital = data_por_extenso(datetime.now()).upper()
     regiao = buscar_regiao_administrativa(municipio, mapa_regiao)
@@ -485,7 +485,7 @@ def gerar_edital_caixa(
 
     for idx in grupo.index:
         excel_row = idx + 2
-        aba_caixa[f"{coluna_status}{excel_row}"] = "Edital criado"
+        aba_caixa[f"{coluna_status}{excel_row}"] = "Edital criado para teste"
 
 
 def gerar_editais_caixa(
@@ -548,9 +548,9 @@ def gerar_edital_massa(
 ):
     """
     Gera o .docx de um único edital de massa (cada linha da planilha é
-    um edital, sem agrupamento) e marca a linha como 'Edital criado' na
-    planilha, em memória (o arquivo Excel é salvo uma única vez, no
-    final do script).
+    um edital, sem agrupamento) e marca a linha como 'Edital criado para
+    teste' na planilha, em memória (o arquivo Excel é salvo uma única
+    vez, no final do script).
     """
     data_edital = data_por_extenso(datetime.now()).upper()
 
@@ -590,7 +590,7 @@ def gerar_edital_massa(
     documento.render(contexto_edital)
     documento.save(caminho_arquivo)
 
-    aba_massa[f"{coluna_status}{excel_row}"] = "Edital criado"
+    aba_massa[f"{coluna_status}{excel_row}"] = "Edital criado para teste"
 
 
 def gerar_editais_massa(

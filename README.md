@@ -10,11 +10,11 @@ A partir de uma planilha Excel com a relação de documentos a serem eliminados,
 
 - Filtra os registros marcados como **"Criar edital"** em cada aba;
 - Busca a **Região Administrativa** de cada município na aba "Municípios" (usada tanto pelo edital de caixa quanto pelo de massa);
-- Busca na aba "Membros CADA" o membro com **STATUS "Ativo"** e usa o nome e cargo dele na assinatura do edital;
+- Busca na aba "Membros CADA" o membro com **Status "Ativo"** e usa o nome e cargo dele na assinatura do edital;
 - **Edital de Caixa**: agrupa os itens por **Número de Processo SEI** e **Município**, ordena pela **Série documental** e preenche o template com o detalhamento de cada item, incluindo a conversão de quantidades por extenso;
 - **Edital de Massa**: cada linha da planilha gera o seu próprio edital — calcula o **Volume em metros cúbicos** (Comprimento × Largura × Altura) e o converte em **Total de Metros Lineares**;
 - Gera um documento **Word (.docx)** para cada edital, na pasta de editais elaborados;
-- Atualiza a planilha original, marcando os registros processados como **"Edital criado para teste"**.
+- Atualiza a planilha original, marcando os registros processados como **"Edital criado"**.
 
 ## Tecnologias utilizadas
 
@@ -35,7 +35,7 @@ A conversão de quantidades numéricas por extenso (edital de caixa) é feita po
 
 A data por extenso do cabeçalho também é montada por uma função própria (`data_por_extenso`), com os nomes dos meses em português fixos no código — em vez de depender de `locale.setlocale`, que usa nomes de locale (`pt_BR.UTF-8`) específicos de Linux/macOS e não funciona nas máquinas Windows do DETRAN.
 
-O arquivo Excel e os templates `.docx` são abertos **uma única vez**, fora dos loops de geração: `load_workbook(ARQUIVO)` roda uma vez no início e `wb.save(ARQUIVO)` uma vez no final (marcando "Edital criado para teste" em memória a cada edital gerado, sem resalvar a cada iteração); os bytes de cada template são lidos do disco uma vez e reutilizados via `io.BytesIO` para instanciar um `DocxTemplate` novo a cada edital (o docxtpl exige uma instância nova por render, mas isso evita reabrir o arquivo do disco a cada vez).
+O arquivo Excel e os templates `.docx` são abertos **uma única vez**, fora dos loops de geração: `load_workbook(ARQUIVO)` roda uma vez no início e `wb.save(ARQUIVO)` uma vez no final (marcando "Edital criado" em memória a cada edital gerado, sem resalvar a cada iteração); os bytes de cada template são lidos do disco uma vez e reutilizados via `io.BytesIO` para instanciar um `DocxTemplate` novo a cada edital (o docxtpl exige uma instância nova por render, mas isso evita reabrir o arquivo do disco a cada vez).
 
 Já o edital de massa não lida com quantidades por extenso — ele converte volume em metros cúbicos para metros lineares multiplicando por um fator fixo (`METROS_LINEARES_POR_METRO_CUBICO = 12`), e formata os números no padrão brasileiro (vírgula decimal, sem zeros à direita) através da função `formatar_numero_br`.
 
@@ -71,7 +71,7 @@ O script precisa ser executado com a pasta do SharePoint [Editais de Eliminaçã
   - `Edital de Caixa` — relação de documentos catalogados a eliminar (Nº Processo SEI, Município, Função, Subfunção, Atividade, Série documental, Descrição documental, Data Limite, Quantidade, Observações complementares, Status Edital). Várias linhas com o mesmo **Nº Processo SEI + Município** viram um único edital, com um item para cada linha. Quando "Data Limite" lista mais de 6 anos separados por "/" (ex.: `2001/2002/.../2013`), o script quebra a linha automaticamente — até 6 anos na primeira linha e até 8 por linha nas seguintes, com a "/" de continuação no final de cada linha (ex.: `2001/2002/2003/2004/2005/2006/` seguido de `2007/2008/...`) — reproduzindo a quebra que a equipe de publicação do Diário Oficial já fazia manualmente por questão de espaço. A "Descrição documental" segue a mesma ideia, mas por palavra e com uma única quebra: se passar de 7 palavras, quebra a linha após a 7ª palavra completa, e o restante do texto (não importa o tamanho) continua na segunda linha, sem quebrar de novo
   - `Edital de Massa` — documentos eliminados em bloco (Data do pedido, Nº Processo SEI, Município, Comprimento, Largura, Altura, Observações complementares, Status Edital). **Cada linha gera o seu próprio edital** (sem agrupamento). O volume em m³ é Comprimento × Largura × Altura, convertido em metros lineares. A coluna "Data do pedido" é apenas de referência manual dos digitadores — não é lida pelo script (o cabeçalho do edital usa a data de hoje)
   - `Municípios` — colunas `Município` e `Região Administrativa`, usada como referência para preencher a região administrativa no cabeçalho de ambos os tipos de edital. Município não cadastrado nesta aba interrompe o script com erro
-  - `Membros CADA` — colunas `NOME`, `CARGO` e `STATUS`; o membro com `STATUS` "Ativo" é quem assina o edital. Se nenhum membro estiver "Ativo", assina fixo "IARA LOPES DA SILVA" / "Coordenadora". O script para com erro apenas se houver **mais de um** membro "Ativo" ao mesmo tempo (assinatura ambígua)
+  - `Membros CADA` — colunas `NOME`, `CARGO` e `Status`; o membro com `Status` "Ativo" é quem assina o edital. Se nenhum membro estiver "Ativo", assina fixo "IARA LOPES DA SILVA" / "Coordenadora". O script para com erro apenas se houver **mais de um** membro "Ativo" ao mesmo tempo (assinatura ambígua)
 - `Editais Elaborados/` — pasta de saída dos editais gerados em `.docx`
 - `Modelos/modelo_edital_caixa.docx` — template do edital de caixa, com placeholders Jinja2 (`{{ data_edital }}`, `{{ regiao }}`, `{{ municipio }}`, `{{ total_caixas }}`, `{{ nome_membro }}`, `{{ cargo_membro }}` etc.) e um trecho repetido para cada item do detalhamento (`{% for item in itens %} ... {% endfor %}`)
 - `Modelos/modelo_edital_massa.docx` — template do edital de massa, com placeholders (`{{ altura }}`, `{{ comprimento }}`, `{{ largura }}`, `{{ metros_cubicos }}`, `{{ total_metros_lineares }}`, `{{ observacoes_complementares }}` etc.)
